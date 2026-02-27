@@ -83,7 +83,7 @@ cd Time-Benefit-Enhancement-Trading-Assistant
 docker-compose up -d --build
 ```
 
-启动后访问 http://localhost 即可使用。
+启动后访问 http://localhost:8082 即可使用。
 
 ### 本地开发
 
@@ -129,7 +129,8 @@ npm run dev
 
 ## API 文档
 
-启动后端后访问 http://localhost:8000/docs 查看完整的 Swagger API 文档。
+Docker 部署：访问 http://localhost:8082/docs 查看 Swagger API 文档。  
+本地开发：访问 http://localhost:8000/docs 查看 Swagger API 文档。
 
 主要端点：
 
