@@ -1,0 +1,33 @@
+services:
+  backend:
+    build: ./backend
+    container_name: trading-backend
+    restart: unless-stopped
+    volumes:
+      - db-data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./data/trading.db
+    expose:
+      - "8000"
+    networks:
+      - trading-net
+
+  frontend:
+    build: ./frontend
+    container_name: trading-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+    networks:
+      - trading-net
+
+volumes:
+  db-data:
+
+networks:
+  trading-net:
+    driver: bridge
