@@ -8,7 +8,7 @@ from app.config import settings
 from app.database import engine, Base
 from app.models import Setting
 from app.database import SessionLocal
-from app.routes import stocks, positions, trades, market, dashboard
+from app.routes import stocks, positions, trades, market, dashboard, data
 
 
 @asynccontextmanager
@@ -17,6 +17,12 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     # 初始化默认设置
     _init_default_settings()
+    # 预热上交所交易日历缓存
+    try:
+        from app.calculator import _get_xshg_calendar
+        _get_xshg_calendar()
+    except Exception:
+        pass
     yield
 
 
@@ -42,6 +48,7 @@ app.include_router(positions.router)
 app.include_router(trades.router)
 app.include_router(market.router)
 app.include_router(dashboard.router)
+app.include_router(data.router)
 
 
 # 设置路由

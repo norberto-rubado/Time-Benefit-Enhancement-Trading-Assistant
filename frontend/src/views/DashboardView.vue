@@ -70,7 +70,19 @@
           </div>
 
           <div v-if="stock.next_action" class="next-action">
-            <el-tag :type="stock.next_action.includes('卖') ? 'success' : 'warning'" size="small">
+            <el-button
+              v-if="stock.next_action_slot && stock.next_action_direction"
+              :type="stock.next_action.includes('卖') ? 'success' : 'warning'"
+              size="small"
+              @click="openQuickTrade(stock, $event)"
+            >
+              {{ stock.next_action }}
+            </el-button>
+            <el-tag
+              v-else
+              :type="stock.next_action.includes('卖') ? 'success' : 'warning'"
+              size="small"
+            >
               {{ stock.next_action }}
             </el-tag>
             <span class="action-price">{{ stock.next_action_price?.toFixed(2) }}</span>
@@ -78,6 +90,17 @@
         </div>
       </el-card>
     </div>
+
+    <!-- 快捷交易弹窗 -->
+    <TradeForm
+      v-model:visible="showTradeDialog"
+      :stock-id="tradeStockId"
+      :stock-name="tradeStockName"
+      :slot-num="tradeSlot"
+      :direction="tradeDirection"
+      :suggested-price="tradeSuggestedPrice"
+      @success="onTradeSuccess"
+    />
   </div>
 </template>
 
@@ -85,9 +108,32 @@
 import { onMounted, ref } from 'vue'
 import { useStockStore } from '../stores/stock'
 import { storeToRefs } from 'pinia'
+import TradeForm from '../components/TradeForm.vue'
 
 const store = useStockStore()
 const { dashboard, loading } = storeToRefs(store)
+
+// 快捷交易弹窗状态
+const showTradeDialog = ref(false)
+const tradeStockId = ref(null)
+const tradeStockName = ref('')
+const tradeSlot = ref(1)
+const tradeDirection = ref('buy')
+const tradeSuggestedPrice = ref(null)
+
+function openQuickTrade(stock, event) {
+  event.stopPropagation()  // 阻止卡片导航
+  tradeStockId.value = stock.stock_id
+  tradeStockName.value = stock.stock_name
+  tradeSlot.value = stock.next_action_slot
+  tradeDirection.value = stock.next_action_direction
+  tradeSuggestedPrice.value = stock.next_action_price
+  showTradeDialog.value = true
+}
+
+function onTradeSuccess() {
+  store.fetchDashboard()
+}
 
 onMounted(() => {
   store.fetchDashboard()

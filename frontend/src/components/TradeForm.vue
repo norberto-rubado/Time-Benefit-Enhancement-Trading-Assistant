@@ -24,6 +24,17 @@
       </el-form-item>
       <el-form-item label="数量" required>
         <el-input-number v-model="form.shares" :min="100" :step="100" style="width: 100%" />
+        <div class="quick-shares">
+          <el-button
+            v-for="n in [100, 200, 500, 1000]"
+            :key="n"
+            size="small"
+            :type="form.shares === n ? 'primary' : 'default'"
+            @click="form.shares = n"
+          >
+            {{ n }}股
+          </el-button>
+        </div>
       </el-form-item>
       <el-form-item label="日期">
         <el-date-picker v-model="form.trade_date" type="date" value-format="YYYY-MM-DD" placeholder="默认今天" style="width: 100%" />
@@ -96,5 +107,11 @@ async function submit() {
   font-size: 12px;
   color: #909399;
   margin-top: 4px;
+}
+
+.quick-shares {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
 }
 </style>

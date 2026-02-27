@@ -11,8 +11,30 @@
 - min_N = 最小持仓天数 (默认22)
 """
 
+import logging
 from datetime import date, timedelta
 from typing import Optional
+
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+# --- 上交所 (XSHG) 日历单例缓存 ---
+_xshg_calendar = None
+
+
+def _get_xshg_calendar():
+    """懒加载并缓存上交所交易日历（XSHG）"""
+    global _xshg_calendar
+    if _xshg_calendar is None:
+        try:
+            import exchange_calendars
+            _xshg_calendar = exchange_calendars.get_calendar("XSHG")
+            logger.info("上交所交易日历加载成功")
+        except Exception as e:
+            logger.warning(f"加载上交所交易日历失败: {e}")
+            _xshg_calendar = False  # 标记为加载失败，避免重复尝试
+    return _xshg_calendar if _xshg_calendar is not False else None
 
 
 def calculate_sell_price(buy_price: float, R: float, N: int, min_N: int = 22) -> float:
@@ -40,11 +62,8 @@ def calculate_profit_rate(buy_price: float, sell_price: float) -> float:
     return (sell_price - buy_price) / buy_price
 
 
-def count_trading_days(start_date: date, end_date: date) -> int:
-    """计算两个日期之间的交易日数（排除周末，简化处理不含节假日）
-
-    从start_date的下一个交易日开始计数到end_date
-    """
+def _count_trading_days_fallback(start_date: date, end_date: date) -> int:
+    """Fallback: 仅排除周末的交易日计算"""
     if end_date <= start_date:
         return 1
 
@@ -55,6 +74,35 @@ def count_trading_days(start_date: date, end_date: date) -> int:
             count += 1
         current += timedelta(days=1)
     return max(count, 1)
+
+
+def count_trading_days(start_date: date, end_date: date) -> int:
+    """计算两个日期之间的交易日数（使用上交所日历，含中国法定节假日）
+
+    优先使用 exchange_calendars XSHG 日历精确计算，
+    若不可用则 fallback 到仅排除周末的简化逻辑。
+    """
+    if end_date <= start_date:
+        return 1
+
+    calendar = _get_xshg_calendar()
+    if calendar is not None:
+        try:
+            start_ts = pd.Timestamp(start_date)
+            end_ts = pd.Timestamp(end_date)
+            # 确保日期在日历范围内
+            if start_ts < calendar.first_session:
+                start_ts = calendar.first_session
+            if end_ts > calendar.last_session:
+                end_ts = calendar.last_session
+            if start_ts > end_ts:
+                return 1
+            sessions = calendar.sessions_in_range(start_ts, end_ts)
+            return max(len(sessions), 1)
+        except Exception as e:
+            logger.warning(f"使用交易日历计算失败，回退到简化逻辑: {e}")
+
+    return _count_trading_days_fallback(start_date, end_date)
 
 
 def check_new_high(all_time_high: Optional[float], latest_close: float) -> bool:

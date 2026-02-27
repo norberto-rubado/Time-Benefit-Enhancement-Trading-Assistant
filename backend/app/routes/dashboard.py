@@ -25,6 +25,8 @@ def get_summary(db: Session = Depends(get_db)):
         held_count = 0
         next_action = None
         next_action_price = None
+        next_action_slot = None
+        next_action_direction = None
 
         for s in ladder.get("steps", []):
             step = LadderStep(
@@ -47,6 +49,8 @@ def get_summary(db: Session = Depends(get_db)):
                     if stock.latest_close >= s["sell_price"]:
                         next_action = f"可卖出第{s['slot']}笔"
                         next_action_price = s["sell_price"]
+                        next_action_slot = s["slot"]
+                        next_action_direction = "sell"
 
             elif s["status"] == "empty" and next_action is None:
                 # 找到第一个空仓位的预估买入价
@@ -54,9 +58,13 @@ def get_summary(db: Session = Depends(get_db)):
                 if buy_p and stock.latest_close and stock.latest_close <= buy_p:
                     next_action = f"可买入第{s['slot']}笔"
                     next_action_price = buy_p
+                    next_action_slot = s["slot"]
+                    next_action_direction = "buy"
                 elif buy_p and not next_action:
                     next_action = f"等待第{s['slot']}笔买入"
                     next_action_price = buy_p
+                    next_action_slot = s["slot"]
+                    next_action_direction = "buy"
 
         total_held += held_count
 
@@ -71,6 +79,8 @@ def get_summary(db: Session = Depends(get_db)):
             positions=steps,
             next_action=next_action,
             next_action_price=next_action_price,
+            next_action_slot=next_action_slot,
+            next_action_direction=next_action_direction,
         ))
 
     return DashboardResponse(

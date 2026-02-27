@@ -46,4 +46,16 @@ export const settingsApi = {
   update: (data) => api.put('/settings', data),
 }
 
+// 数据导入导出API
+export const dataApi = {
+  exportData: () => api.get('/data/export', { responseType: 'blob' }),
+  importData: (file, mode = 'replace') => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post(`/data/import?mode=${mode}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+}
+
 export default api

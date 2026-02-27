@@ -75,6 +75,39 @@
       </el-table>
     </el-card>
 
+    <!-- 数据管理 -->
+    <el-card class="settings-card">
+      <template #header>数据管理</template>
+      <div class="data-section">
+        <div class="data-item">
+          <div class="data-info">
+            <h4>导出数据</h4>
+            <p>将所有股票、仓位、交易记录和设置导出为 JSON 文件，用于备份或迁移。</p>
+          </div>
+          <el-button type="primary" @click="handleExport" :loading="exporting">
+            下载备份
+          </el-button>
+        </div>
+        <el-divider />
+        <div class="data-item">
+          <div class="data-info">
+            <h4>导入数据</h4>
+            <p>从 JSON 备份文件恢复数据。注意：导入将替换当前所有数据。</p>
+          </div>
+          <el-button type="warning" @click="triggerImport" :loading="importing">
+            选择文件导入
+          </el-button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".json"
+            style="display: none"
+            @change="handleImportFile"
+          />
+        </div>
+      </div>
+    </el-card>
+
     <!-- 添加股票对话框 -->
     <el-dialog v-model="showAddDialog" title="添加股票" width="420px">
       <el-form :model="newStock" label-width="80px">
@@ -115,8 +148,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useStockStore } from '../stores/stock'
-import { settingsApi, marketApi } from '../api'
-import { ElMessage } from 'element-plus'
+import { settingsApi, marketApi, dataApi } from '../api'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const store = useStockStore()
 const stocks = ref([])
@@ -127,6 +160,74 @@ const adding = ref(false)
 const searching = ref(false)
 const searchResults = ref([])
 const newStock = ref({ code: '', name: '', anchor_price: null })
+
+// 数据导入导出
+const exporting = ref(false)
+const importing = ref(false)
+const fileInput = ref(null)
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const { data } = await dataApi.exportData()
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const now = new Date()
+    const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
+    link.download = `trading_assistant_backup_${timestamp}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    ElMessage.success('数据导出成功')
+  } catch (e) {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
+function triggerImport() {
+  fileInput.value?.click()
+}
+
+async function handleImportFile(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  // 重置 input 以便再次选择同一文件
+  event.target.value = ''
+
+  try {
+    await ElMessageBox.confirm(
+      '导入将替换当前所有数据，此操作不可撤销。建议先导出备份。是否继续？',
+      '确认导入',
+      {
+        confirmButtonText: '确认导入',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+  } catch {
+    return // 用户取消
+  }
+
+  importing.value = true
+  try {
+    const { data } = await dataApi.importData(file, 'replace')
+    const msg = `导入成功！股票: ${data.stats.stocks}, 仓位: ${data.stats.positions}, 交易: ${data.stats.trades}, 价格: ${data.stats.price_history}, 设置: ${data.stats.settings}`
+    ElMessage.success(msg)
+    // 刷新页面数据
+    await loadSettings()
+    await loadStocks()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.detail || '导入失败')
+  } finally {
+    importing.value = false
+  }
+}
 
 async function loadSettings() {
   try {
@@ -244,5 +345,33 @@ onMounted(() => {
   padding: 8px;
   background: #f5f7fa;
   border-radius: 4px;
+}
+
+.data-section {
+  padding: 0 4px;
+}
+
+.data-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.data-info {
+  flex: 1;
+}
+
+.data-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: #303133;
+}
+
+.data-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
 }
 </style>

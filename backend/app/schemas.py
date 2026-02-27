@@ -158,6 +158,8 @@ class DashboardStockSummary(BaseModel):
     positions: list[LadderStep]
     next_action: Optional[str] = None
     next_action_price: Optional[float] = None
+    next_action_slot: Optional[int] = None        # 操作对应的仓位号 (1-4)
+    next_action_direction: Optional[str] = None   # "buy" 或 "sell"
 
 
 class DashboardResponse(BaseModel):
