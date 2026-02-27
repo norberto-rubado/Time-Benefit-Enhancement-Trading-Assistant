@@ -1,8 +1,10 @@
 """时益增效交易助手 - FastAPI入口"""
 
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text, inspect
 
 from app.config import settings
 from app.database import engine, Base
@@ -10,11 +12,15 @@ from app.models import Setting
 from app.database import SessionLocal
 from app.routes import stocks, positions, trades, market, dashboard, data
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 启动时创建表
     Base.metadata.create_all(bind=engine)
+    # 迁移：添加 Trade 作废相关列
+    _migrate_trade_void_columns()
     # 初始化默认设置
     _init_default_settings()
     # 预热上交所交易日历缓存
@@ -100,3 +106,24 @@ def _init_default_settings():
         db.commit()
     finally:
         db.close()
+
+
+def _migrate_trade_void_columns():
+    """安全迁移：为 trades 表添加 is_voided 和 voided_at 列"""
+    inspector = inspect(engine)
+    columns = [col["name"] for col in inspector.get_columns("trades")]
+
+    with engine.connect() as conn:
+        if "is_voided" not in columns:
+            conn.execute(text(
+                "ALTER TABLE trades ADD COLUMN is_voided BOOLEAN NOT NULL DEFAULT 0"
+            ))
+            logger.info("迁移完成: trades 表添加 is_voided 列")
+
+        if "voided_at" not in columns:
+            conn.execute(text(
+                "ALTER TABLE trades ADD COLUMN voided_at DATETIME"
+            ))
+            logger.info("迁移完成: trades 表添加 voided_at 列")
+
+        conn.commit()

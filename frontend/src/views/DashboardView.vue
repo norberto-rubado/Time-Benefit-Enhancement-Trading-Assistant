@@ -8,7 +8,31 @@
       </div>
     </div>
 
-    <el-card v-if="!dashboard?.stocks?.length" class="empty-card">
+    <!-- 骨架屏加载状态 -->
+    <div v-if="loading" class="stock-cards">
+      <el-card v-for="n in 3" :key="n" class="stock-card skeleton-card">
+        <template #header>
+          <el-skeleton :rows="0" animated>
+            <template #template>
+              <div class="card-header">
+                <div class="stock-info">
+                  <el-skeleton-item variant="text" style="width: 80px; height: 20px" />
+                  <el-skeleton-item variant="text" style="width: 60px; height: 16px" />
+                </div>
+                <div class="stock-price">
+                  <el-skeleton-item variant="text" style="width: 40px; height: 12px" />
+                  <el-skeleton-item variant="text" style="width: 60px; height: 24px" />
+                </div>
+              </div>
+            </template>
+          </el-skeleton>
+        </template>
+        <el-skeleton :rows="4" animated />
+      </el-card>
+    </div>
+
+    <!-- 空状态 -->
+    <el-card v-else-if="!dashboard?.stocks?.length" class="empty-card">
       <el-empty description="暂无股票，请在设置页面添加">
         <el-button type="primary" @click="$router.push('/settings')">去添加</el-button>
       </el-empty>
@@ -288,5 +312,13 @@ onMounted(() => {
 .empty-card {
   max-width: 500px;
   margin: 40px auto;
+}
+
+.skeleton-card {
+  cursor: default;
+}
+
+.skeleton-card:hover {
+  transform: none;
 }
 </style>

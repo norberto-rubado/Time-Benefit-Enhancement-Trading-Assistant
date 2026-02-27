@@ -7,6 +7,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class AKShareServiceError(Exception):
+    """AKShare 服务不可用异常"""
+    pass
+
+
+class StockNotFoundError(Exception):
+    """股票未找到异常"""
+    pass
+
+
 def fetch_realtime_price(stock_code: str) -> Optional[dict]:
     """获取实时行情数据
 
@@ -15,13 +25,17 @@ def fetch_realtime_price(stock_code: str) -> Optional[dict]:
 
     Returns:
         {"code": str, "name": str, "price": float, "high": float, "low": float, "open": float, "volume": float}
+
+    Raises:
+        AKShareServiceError: AKShare 服务不可用
+        StockNotFoundError: 股票代码未找到
     """
     try:
         import akshare as ak
         df = ak.stock_zh_a_spot_em()
         row = df[df["代码"] == stock_code]
         if row.empty:
-            return None
+            raise StockNotFoundError(f"未找到股票代码: {stock_code}")
         row = row.iloc[0]
         return {
             "code": str(row["代码"]),
@@ -32,9 +46,11 @@ def fetch_realtime_price(stock_code: str) -> Optional[dict]:
             "open": float(row["今开"]),
             "volume": float(row["成交量"]),
         }
+    except StockNotFoundError:
+        raise
     except Exception as e:
         logger.error(f"获取实时行情失败 {stock_code}: {e}")
-        return None
+        raise AKShareServiceError(f"行情服务暂时不可用: {e}")
 
 
 def fetch_history_prices(
@@ -51,6 +67,9 @@ def fetch_history_prices(
 
     Returns:
         [{"date": date, "close": float, "high": float, "low": float, "open": float, "volume": float}]
+
+    Raises:
+        AKShareServiceError: AKShare 服务不可用
     """
     try:
         import akshare as ak
@@ -78,7 +97,7 @@ def fetch_history_prices(
         return result
     except Exception as e:
         logger.error(f"获取历史行情失败 {stock_code}: {e}")
-        return []
+        raise AKShareServiceError(f"历史行情服务暂时不可用: {e}")
 
 
 def search_stock(keyword: str) -> list[dict]:
@@ -89,6 +108,9 @@ def search_stock(keyword: str) -> list[dict]:
 
     Returns:
         [{"code": str, "name": str}]
+
+    Raises:
+        AKShareServiceError: AKShare 服务不可用
     """
     try:
         import akshare as ak
@@ -101,4 +123,4 @@ def search_stock(keyword: str) -> list[dict]:
         ]
     except Exception as e:
         logger.error(f"搜索股票失败 {keyword}: {e}")
-        return []
+        raise AKShareServiceError(f"行情服务暂时不可用: {e}")

@@ -183,7 +183,7 @@ async function handleExport() {
     URL.revokeObjectURL(url)
     ElMessage.success('数据导出成功')
   } catch (e) {
-    ElMessage.error('导出失败')
+    // 全局拦截器已处理错误提示
   } finally {
     exporting.value = false
   }
@@ -223,7 +223,7 @@ async function handleImportFile(event) {
     await loadSettings()
     await loadStocks()
   } catch (e) {
-    ElMessage.error(e.response?.data?.detail || '导入失败')
+    // 全局拦截器已处理错误提示
   } finally {
     importing.value = false
   }
@@ -252,7 +252,7 @@ async function saveParams() {
     ])
     ElMessage.success('参数保存成功')
   } catch (e) {
-    ElMessage.error('保存失败')
+    // 全局拦截器已处理错误提示
   } finally {
     saving.value = false
   }
@@ -270,7 +270,7 @@ async function searchStock() {
     const { data } = await marketApi.search(newStock.value.code || newStock.value.name)
     searchResults.value = data
   } catch (e) {
-    ElMessage.error('搜索失败')
+    // 全局拦截器已处理错误提示
   } finally {
     searching.value = false
   }
@@ -295,7 +295,7 @@ async function addStock() {
     newStock.value = { code: '', name: '', anchor_price: null }
     await loadStocks()
   } catch (e) {
-    ElMessage.error(e.response?.data?.detail || '添加失败')
+    // 全局拦截器已处理错误提示
   } finally {
     adding.value = false
   }
@@ -307,7 +307,7 @@ async function onDelete(id) {
     ElMessage.success('删除成功')
     await loadStocks()
   } catch (e) {
-    ElMessage.error('删除失败')
+    // 全局拦截器已处理错误提示
   }
 }
 

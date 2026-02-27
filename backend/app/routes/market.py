@@ -2,13 +2,17 @@
 
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Stock
 from app.schemas import PriceInput
 from app.services.price_tracker import update_price
-from app.services.market_data import fetch_realtime_price, fetch_history_prices, search_stock
+from app.services.market_data import (
+    fetch_realtime_price, fetch_history_prices, search_stock,
+    AKShareServiceError, StockNotFoundError,
+)
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
@@ -42,7 +46,16 @@ def manual_price_input(data: PriceInput, db: Session = Depends(get_db)):
 @router.post("/fetch/{stock_code}")
 def fetch_price(stock_code: str, db: Session = Depends(get_db)):
     """通过AKShare获取实时行情"""
-    data = fetch_realtime_price(stock_code)
+    try:
+        data = fetch_realtime_price(stock_code)
+    except StockNotFoundError:
+        raise HTTPException(status_code=404, detail="未找到该股票代码，请检查后重试")
+    except AKShareServiceError:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "行情服务暂时不可用，请稍后重试或手动输入价格"},
+        )
+
     if not data:
         raise HTTPException(status_code=404, detail="获取行情失败，请检查股票代码")
 
@@ -74,7 +87,14 @@ def fetch_history(stock_code: str, start_date: str = "20200101", db: Session = D
     if not stock:
         raise HTTPException(status_code=404, detail="该股票未添加到系统中")
 
-    prices = fetch_history_prices(stock_code, start_date)
+    try:
+        prices = fetch_history_prices(stock_code, start_date)
+    except AKShareServiceError:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "历史行情服务暂时不可用，请稍后重试"},
+        )
+
     if not prices:
         raise HTTPException(status_code=404, detail="获取历史数据失败")
 
@@ -95,5 +115,11 @@ def fetch_history(stock_code: str, start_date: str = "20200101", db: Session = D
 @router.get("/search")
 def search(keyword: str):
     """搜索股票"""
-    results = search_stock(keyword)
+    try:
+        results = search_stock(keyword)
+    except AKShareServiceError:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "行情服务暂时不可用，请稍后重试"},
+        )
     return results

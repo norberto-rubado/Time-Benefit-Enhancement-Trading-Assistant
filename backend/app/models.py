@@ -81,6 +81,8 @@ class Trade(Base):
     shares = Column(Integer, nullable=False)
     trade_date = Column(Date, default=date.today)
     note = Column(String(200), nullable=True)
+    is_voided = Column(Boolean, default=False, nullable=False)
+    voided_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 
     stock = relationship("Stock", back_populates="trades")

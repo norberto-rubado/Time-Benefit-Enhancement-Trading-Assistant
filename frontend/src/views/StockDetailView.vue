@@ -144,7 +144,13 @@ async function fetchMarketPrice() {
     }
     await loadData()
   } catch (e) {
-    ElMessage.error(e.response?.data?.detail || '获取行情失败')
+    if (e.response?.status === 503) {
+      // AKShare 服务不可用 → 降级引导
+      ElMessage.warning('自动获取失败，请手动输入价格')
+      showPriceDialog.value = true
+    } else {
+      ElMessage.error(e.response?.data?.detail || '获取行情失败')
+    }
   } finally {
     fetchingPrice.value = false
   }

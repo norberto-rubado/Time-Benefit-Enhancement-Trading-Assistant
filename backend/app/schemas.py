@@ -101,6 +101,8 @@ class TradeResponse(BaseModel):
     shares: int
     trade_date: date
     note: Optional[str]
+    is_voided: bool = False
+    voided_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:
@@ -118,6 +120,8 @@ class TradeLogResponse(BaseModel):
     shares: int
     trade_date: date
     note: Optional[str]
+    is_voided: bool = False
+    voided_at: Optional[datetime] = None
     created_at: datetime
 
 

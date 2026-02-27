@@ -55,7 +55,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { positionApi } from '../api'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const props = defineProps({
   visible: Boolean,
@@ -87,6 +87,24 @@ async function submit() {
     ElMessage.warning('请填写价格和数量')
     return
   }
+
+  // 卖出二次确认
+  if (props.direction === 'sell') {
+    try {
+      await ElMessageBox.confirm(
+        `确认卖出 ${props.stockName} 第${props.slotNum}笔 ${form.value.shares}股 @ ${form.value.price}?`,
+        '卖出确认',
+        {
+          confirmButtonText: '确认卖出',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+      )
+    } catch {
+      return // 用户取消
+    }
+  }
+
   submitting.value = true
   try {
     const api = props.direction === 'buy' ? positionApi.buy : positionApi.sell
@@ -95,7 +113,7 @@ async function submit() {
     emit('update:visible', false)
     emit('success')
   } catch (e) {
-    ElMessage.error(e.response?.data?.detail || '操作失败')
+    // 全局拦截器已处理错误提示
   } finally {
     submitting.value = false
   }

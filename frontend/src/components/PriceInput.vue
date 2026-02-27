@@ -68,7 +68,7 @@ async function submit() {
     emit('update:visible', false)
     emit('success')
   } catch (e) {
-    ElMessage.error(e.response?.data?.detail || '更新失败')
+    // 全局拦截器已处理错误提示
   } finally {
     submitting.value = false
   }
